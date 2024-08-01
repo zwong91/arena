@@ -25,7 +25,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-var helmCmd = []string{"arena-helm"}
+var helmCmd = []string{"helm"}
 
 /**
 * install the release with cmd: helm install -f values.yaml chart_name

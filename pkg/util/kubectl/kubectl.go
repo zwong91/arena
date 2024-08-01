@@ -33,7 +33,7 @@ import (
 	"github.com/kubeflow/arena/pkg/apis/config"
 )
 
-var kubectlCmd = []string{"arena-kubectl"}
+var kubectlCmd = []string{"kubectl"}
 
 /**
 * dry-run creating kubernetes App Info for delete in future

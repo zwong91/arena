@@ -26,12 +26,12 @@ Please follow [kubectl installation guide](https://kubernetes.io/docs/tasks/tool
 
 - Download Helm client from [github.com](https://github.com/helm/helm/releases)  
 - Unpack it (tar -zxvf helm-v2.14.1-linux-amd64.tgz)
-- Find the `helm` binary in the unpacked directory, and move it to its desired destination (mv linux-amd64/helm /usr/local/bin/arena-helm)
+- Find the `helm` binary in the unpacked directory, and move it to its desired destination (mv linux-amd64/helm /usr/local/bin/helm)
 
 Then run `helm list` to check if the the kubernetes can be managed successfully by helm.
 
 ```
-# arena-helm list
+# helm list
 # echo $?
 0
 ```

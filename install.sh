@@ -84,24 +84,24 @@ function set_sudo() {
     fi
 }
 
-# install kubectl and rename arena-kubectl
-# install helm and rename arena-helm
+# install kubectl and rename kubectl
+# install helm and rename helm
 function install_kubectl_and_helm() {
-    logger "debug" "start to install arena-kubectl and arena-helm"
-    ${sudo_prefix} rm -rf /usr/local/bin/arena-kubectl
-    ${sudo_prefix} rm -rf /usr/local/bin/arena-helm
+    logger "debug" "start to install kubectl and helm"
+    ${sudo_prefix} rm -rf /usr/local/bin/kubectl
+    ${sudo_prefix} rm -rf /usr/local/bin/helm
 
-    ${sudo_prefix} cp $SCRIPT_DIR/bin/kubectl /usr/local/bin/arena-kubectl
-    ${sudo_prefix} cp $SCRIPT_DIR/bin/helm /usr/local/bin/arena-helm
+    ${sudo_prefix} cp $SCRIPT_DIR/bin/kubectl /usr/local/bin/kubectl
+    ${sudo_prefix} cp $SCRIPT_DIR/bin/helm /usr/local/bin/helm
 
     if [[ $ONLY_BINARY != "true" ]];then
-        if ! ${sudo_prefix} arena-kubectl cluster-info >/dev/null 2>&1; then
-            logger "error" "failed to execute 'arena-kubectl cluster-info'"
+        if ! ${sudo_prefix} kubectl cluster-info >/dev/null 2>&1; then
+            logger "error" "failed to execute 'kubectl cluster-info'"
             logger "error" "Please setup kubeconfig correctly before installing arena"
             exit 1
         fi
     fi
-    logger "debug" "succeed to install arena-kubectl and arena-helm"
+    logger "debug" "succeed to install kubectl and helm"
 }
 
 function custom_charts() {
@@ -178,19 +178,19 @@ function check_addons() {
     option=$4
     if $check_kubedl;then
         # if KubeDL has installed, will skip install some CRDs of framework operator
-        if arena-kubectl get serviceaccount --all-namespaces | grep kubedl &> /dev/null; then
+        if kubectl get serviceaccount --all-namespaces | grep kubedl &> /dev/null; then
             logger "warning" "KubeDL has been detected, will skip install $addon_name"
             export HELM_OPTIONS="$HELM_OPTIONS --set $option"
             return
         fi
     fi
     # if service account has been existed and it is managed by helm chart
-    if (arena-kubectl get serviceaccount --all-namespaces -l helm.sh/chart=arena-artifacts | grep " $sa "  2>1) &> /dev/null; then
+    if (kubectl get serviceaccount --all-namespaces -l helm.sh/chart=arena-artifacts | grep " $sa "  2>1) &> /dev/null; then
         logger debug "service account $sa has been existed,and it is managed by helm,skip to reinstall $addon_name"
         return
     fi
     # if service account has been existed and it is not managed by helm chart
-    if arena-kubectl get serviceaccount --all-namespaces | grep " $sa " &> /dev/null; then
+    if kubectl get serviceaccount --all-namespaces | grep " $sa " &> /dev/null; then
         logger debug "service account $sa has been existed,and it is not managed by helm,skip to reinstall $addon_name"
         export HELM_OPTIONS="$HELM_OPTIONS --set $option"
         return
@@ -199,7 +199,7 @@ function check_addons() {
 
 function apply_crds() {
     export CRD_VERSION="v1"
-    if arena-kubectl get apiservices v1beta1.apiextensions.k8s.io &> /dev/null;then
+    if kubectl get apiservices v1beta1.apiextensions.k8s.io &> /dev/null;then
         export CRD_VERSION="v1beta1"
     fi
     if [ -d $SCRIPT_DIR/arena-artifacts/crds ];then
@@ -219,8 +219,8 @@ function annotate_crds() {
             if ! grep "^kind: CustomResourceDefinition" $path &> /dev/null;then
                 continue
             fi
-            if arena-kubectl  get -f $path &> /dev/null;then
-                arena-kubectl annotate -f $path --overwrite helm.sh/resource-policy=keep
+            if kubectl  get -f $path &> /dev/null;then
+                kubectl annotate -f $path --overwrite helm.sh/resource-policy=keep
             fi
         fi
     done
@@ -251,19 +251,19 @@ function apply_job_supervisor() {
 function clean_old_env() {
     set +e
     # update the crd version
-    if (arena-kubectl get crd tfjobs.kubeflow.org -oyaml |grep -i 'version: v1alpha2' 2>1) &> /dev/null; then
-        arena-kubectl delete crd tfjobs.kubeflow.org
-        arena-kubectl create -f ${SCRIPT_DIR}/arena-artifacts/charts/tf-operator/crds
+    if (kubectl get crd tfjobs.kubeflow.org -oyaml |grep -i 'version: v1alpha2' 2>1) &> /dev/null; then
+        kubectl delete crd tfjobs.kubeflow.org
+        kubectl create -f ${SCRIPT_DIR}/arena-artifacts/charts/tf-operator/crds
     fi
     # remove the old kubedl-operator
-    #    if arena-kubectl get deployment,Service,ServiceAccount -n $NAMESPACE | grep kubedl-operator &> /dev/null;then
-    #        arena-kubectl delete deployment kubedl-operator -n $NAMESPACE
-    #        arena-kubectl delete ServiceAccount kubedl-operator -n $NAMESPACE
-    #        arena-kubectl delete crd crons.apps.kubedl.io
-    #        arena-kubectl delete ClusterRole kubedl-operator-role -n $NAMESPACE
-    #        arena-kubectl delete ClusterRoleBinding kubedl-operator-rolebinding -n $NAMESPACE
-    #        arena-kubectl delete Service kubedl-operator -n $NAMESPACE
-    #        arena-kubectl delete ServiceMonitor kubedl-operator -n $NAMESPACE
+    #    if kubectl get deployment,Service,ServiceAccount -n $NAMESPACE | grep kubedl-operator &> /dev/null;then
+    #        kubectl delete deployment kubedl-operator -n $NAMESPACE
+    #        kubectl delete ServiceAccount kubedl-operator -n $NAMESPACE
+    #        kubectl delete crd crons.apps.kubedl.io
+    #        kubectl delete ClusterRole kubedl-operator-role -n $NAMESPACE
+    #        kubectl delete ClusterRoleBinding kubedl-operator-rolebinding -n $NAMESPACE
+    #        kubectl delete Service kubedl-operator -n $NAMESPACE
+    #        kubectl delete ServiceMonitor kubedl-operator -n $NAMESPACE
     #    fi
     set -e
 }
@@ -281,18 +281,18 @@ function create_namespace() {
         export NAMESPACE="arena-system"
     fi
     namespace=${NAMESPACE}
-    if arena-kubectl get ns | grep -E "\<$namespace\>" &> /dev/null;then
+    if kubectl get ns | grep -E "\<$namespace\>" &> /dev/null;then
         logger "debug" "namespace $namespace has been existed,skip to create it"
         return
     fi
-    arena-kubectl create ns $namespace
+    kubectl create ns $namespace
 }
 
 function install_binary_on_master() {
     if [[ $INSTALL_BINARY_ON_MASTER != "true" ]];then
         return
     fi
-    master_count=$(arena-kubectl get nodes --show-labels | grep -E 'node-role.kubernetes.io/master|node-role.kubernetes.io/control-plane' | wc -l)
+    master_count=$(kubectl get nodes --show-labels | grep -E 'node-role.kubernetes.io/master|node-role.kubernetes.io/control-plane' | wc -l)
     master_count=$(echo $master_count)
     export HELM_OPTIONS="$HELM_OPTIONS --set binary.enabled=true --set binary.masterCount=$master_count"
 }
@@ -332,12 +332,12 @@ function operators() {
 
 function upgrade_crd() {
     # Upgrade tfjob crd if the following conditions are met.
-    if (arena-kubectl get crd tfjobs.kubeflow.org -oyaml |grep -i "git-commit") &> /dev/null; then
-        old_version=$(arena-kubectl get crd tfjobs.kubeflow.org -oyaml |grep -i "git-commit")
+    if (kubectl get crd tfjobs.kubeflow.org -oyaml |grep -i "git-commit") &> /dev/null; then
+        old_version=$(kubectl get crd tfjobs.kubeflow.org -oyaml |grep -i "git-commit")
         new_version=$(cat $SCRIPT_DIR/arena-artifacts/crds/tf-operator/kubeflow.org_tfjobs_v1.yaml |grep -i "git-commit")
         if [[ ${old_version} != ${new_version} ]]; then
             echo "upgrade tfjob crd from ${old_version} to ${new_version}"
-            arena-kubectl replace -f $SCRIPT_DIR/arena-artifacts/crds/tf-operator/kubeflow.org_tfjobs_v1.yaml
+            kubectl replace -f $SCRIPT_DIR/arena-artifacts/crds/tf-operator/kubeflow.org_tfjobs_v1.yaml
         fi
     fi
 }
@@ -347,7 +347,7 @@ function deploy_with_helm() {
         export HELM_OPTIONS="$HELM_OPTIONS -f $CHART_VALUE_FILE"
     fi
 
-    if arena-helm list -n $NAMESPACE | grep "arena-artifacts" &> /dev/null;then
+    if helm list -n $NAMESPACE | grep "arena-artifacts" &> /dev/null;then
         if [[ $UPDATE_EXISTED_ARTIFACTS != "true" ]];then
             logger debug "user doesn't want to update artifacts,skip"
             return
@@ -355,11 +355,11 @@ function deploy_with_helm() {
         logger debug "arena-artifacts has been installed,start to upgrade it"
         upgrade_crd
         annotate_crds $SCRIPT_DIR/arena-artifacts/crds
-        arena-helm upgrade arena-artifacts -n $NAMESPACE $HELM_OPTIONS $SCRIPT_DIR/arena-artifacts
+        helm upgrade arena-artifacts -n $NAMESPACE $HELM_OPTIONS $SCRIPT_DIR/arena-artifacts
         return
     fi
     upgrade_crd
-    arena-helm install arena-artifacts -n $NAMESPACE $HELM_OPTIONS $SCRIPT_DIR/arena-artifacts
+    helm install arena-artifacts -n $NAMESPACE $HELM_OPTIONS $SCRIPT_DIR/arena-artifacts
 }
 
 function parse_args() {

@@ -16,8 +16,8 @@ $ tar -xvf arena-installer.tar.gz
 
 ```
 $ chmod +x bin/*
-$ cp bin/helm /usr/local/bin/arena-helm
-$ cp bin/kubectl /usr/local/bin/arena-kubectl
+$ cp bin/helm /usr/local/bin/helm
+$ cp bin/kubectl /usr/local/bin/kubectl
 $ cp bin/arena /usr/local/bin/arena
 ```
 

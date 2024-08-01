@@ -37,8 +37,8 @@ var deleteCommandString = `
 $ rm -rf /charts
 $ rm -rf ~/charts
 $ rm -rf /usr/local/bin/arena
-$ rm -rf /usr/local/bin/arena-kubectl
-$ rm -rf /usr/local/bin/arena-helm
+$ rm -rf /usr/local/bin/kubectl
+$ rm -rf /usr/local/bin/helm
 
 and delete the line 'source <(arena completion bash)' in ~/.bashrc or ~/.zshrc
 `
@@ -65,7 +65,7 @@ func deleteArenaArtifacts(force bool) error {
 	if err != nil {
 		return err
 	}
-	stdout, stderr, err := execCommand([]string{"arena-helm", "template", arenaChartName, "-n", *arenaNamespace, manifestDir, strings.Join(fields, " "), ">", tmpFile})
+	stdout, stderr, err := execCommand([]string{"helm", "template", arenaChartName, "-n", *arenaNamespace, manifestDir, strings.Join(fields, " "), ">", tmpFile})
 	if err != nil {
 		return fmt.Errorf("failed to template yaml,reason: %v,%v,%v", stdout, stderr, err)
 	}
@@ -82,11 +82,11 @@ func deleteArenaArtifacts(force bool) error {
 			return err
 		}
 	}
-	stdout, stderr, _ = execCommand([]string{"arena-helm", "del", "arena-artifacts", "-n", *arenaNamespace})
+	stdout, stderr, _ = execCommand([]string{"helm", "del", "arena-artifacts", "-n", *arenaNamespace})
 	fmt.Printf("%v,%v\n", stdout, stderr)
-	stdout, stderr, _ = execCommand([]string{"arena-kubectl", "delete", "-f", tmpFile})
+	stdout, stderr, _ = execCommand([]string{"kubectl", "delete", "-f", tmpFile})
 	fmt.Printf("%v,%v\n", stdout, stderr)
-	stdout, stderr, err = execCommand([]string{"arena-kubectl", "delete", "ns", *arenaNamespace})
+	stdout, stderr, err = execCommand([]string{"kubectl", "delete", "ns", *arenaNamespace})
 	if err != nil {
 		return fmt.Errorf("failed to delete namespace %v,reason: %v,%v,%v", *arenaNamespace, stdout, stderr, err)
 	}
@@ -128,9 +128,9 @@ func CheckRunningJobs(crdNames []string) error {
 }
 
 func getCRs(crdName string) ([]string, error) {
-	stdout, stderr, err := execCommand([]string{"arena-kubectl", "get", crdName, "--all-namespaces"})
+	stdout, stderr, err := execCommand([]string{"kubectl", "get", crdName, "--all-namespaces"})
 	if err != nil {
-		return nil, fmt.Errorf("failed to exec command: [arena-kubectl get %v --all-namespaces],reason: %v,%v", crdName, err, stderr)
+		return nil, fmt.Errorf("failed to exec command: [kubectl get %v --all-namespaces],reason: %v,%v", crdName, err, stderr)
 	}
 	crs := []string{}
 	for _, line := range strings.Split(stdout, "\n") {
@@ -227,7 +227,7 @@ func getInstalledCRDs(crdNames []string) ([]string, error) {
 }
 
 func getAllCRDsInK8s() ([]string, error) {
-	stdout, stderr, err := execCommand([]string{"arena-kubectl", "get", "crd"})
+	stdout, stderr, err := execCommand([]string{"kubectl", "get", "crd"})
 	if err != nil {
 		return nil, fmt.Errorf("exit status: %v,reason: %v", err, stderr)
 	}

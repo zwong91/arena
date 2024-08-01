@@ -73,26 +73,26 @@ function run() {
 }
 
 function check_namespace() {
-    if arena-kubectl get ns | grep "^${USER_NAMESPACE} " &> /dev/null;then
+    if kubectl get ns | grep "^${USER_NAMESPACE} " &> /dev/null;then
         logger debug "namespace ${USER_NAMESPACE} has been existed,skip to create it"
         return
     fi
-    arena-kubectl create ns ${USER_NAMESPACE}
+    kubectl create ns ${USER_NAMESPACE}
 }
 
 function check_admin_kubeconfig() {
     if [[ $ADMIN_KUBECONFIG != "" ]];then
         export KUBECONFIG=$ADMIN_KUBECONFIG
     fi
-    if ! arena-kubectl cluster-info &> /dev/null;then
-        logger error "failed to execute 'arena-kubectl cluster-info',please make sure the role of kubeconfig file is admin"
+    if ! kubectl cluster-info &> /dev/null;then
+        logger error "failed to execute 'kubectl cluster-info',please make sure the role of kubeconfig file is admin"
         exit 1
     fi
 }
 
 function check_user_is_existed() {
     export USER_EXISTED="false" 
-    if arena-kubectl get ClusterRole "arena:$USER_NAMESPACE:$USER_NAME" &> /dev/null;then
+    if kubectl get ClusterRole "arena:$USER_NAMESPACE:$USER_NAME" &> /dev/null;then
         export USER_EXISTED="true"
     fi
 }
@@ -123,7 +123,7 @@ function generate_manifest_yaml() {
         exit 2
     fi    
     output=$1
-    arena-helm template --name $USER_NAME --namespace $USER_NAMESPACE -f $USER_VALUES $CHART_DIR/user > $output
+    helm template --name $USER_NAME --namespace $USER_NAMESPACE -f $USER_VALUES $CHART_DIR/user > $output
 }
 
 function apply_manifest_yaml() {
@@ -131,33 +131,33 @@ function apply_manifest_yaml() {
     user=$USER_NAME
     yaml_file=$TEMPDIR/${user}.yaml
     generate_manifest_yaml $yaml_file
-    arena-kubectl apply -f $yaml_file
-    if arena-kubectl get configmap arena-user-${user} -n $namespace &> /dev/null;then
+    kubectl apply -f $yaml_file
+    if kubectl get configmap arena-user-${user} -n $namespace &> /dev/null;then
         logger debug "delete old configmap of user $user"
-        arena-kubectl delete configmap arena-user-${user} -n $namespace
+        kubectl delete configmap arena-user-${user} -n $namespace
     fi
-    arena-kubectl create configmap arena-user-${user}  -n $namespace --from-file=config=$yaml_file 
+    kubectl create configmap arena-user-${user}  -n $namespace --from-file=config=$yaml_file 
 }
 
 function delete_user() {
     namespace=$USER_NAMESPACE
     user=$USER_NAME
-    if ! arena-kubectl get clusterrole arena:$namespace:$user &> /dev/null;then
+    if ! kubectl get clusterrole arena:$namespace:$user &> /dev/null;then
         logger debug "not found the user $user,skip to delete it"
         exit 0
     fi  
-    if arena-kubectl get configmap -n $namespace arena-user-${user} &> /dev/null;then
-        arena-kubectl get configmap -n $namespace arena-user-${user} -o jsonpath='{.data.config}' > $TEMPDIR/${user}.yaml
-        arena-kubectl delete -f $TEMPDIR/${user}.yaml
+    if kubectl get configmap -n $namespace arena-user-${user} &> /dev/null;then
+        kubectl get configmap -n $namespace arena-user-${user} -o jsonpath='{.data.config}' > $TEMPDIR/${user}.yaml
+        kubectl delete -f $TEMPDIR/${user}.yaml
         return  
     fi 
-    arena-kubectl delete ClusterRoleBinding arena:$namespace:$user
-    arena-kubectl delete clusterrole arena:$namespace:$user 
-    arena-kubectl delete RoleBinding  arena:$user -n $namespace
-    arena-kubectl delete Role arena:$user -n $namespace  
-    arena-kubectl delete ServiceAccount $user -n $namespace
-    if arena-kubectl get quota  arena-quota-$user -n $namespace &> /dev/null;then
-        arena-kubectl delete quota  arena-quota-$user -n $namespace
+    kubectl delete ClusterRoleBinding arena:$namespace:$user
+    kubectl delete clusterrole arena:$namespace:$user 
+    kubectl delete RoleBinding  arena:$user -n $namespace
+    kubectl delete Role arena:$user -n $namespace  
+    kubectl delete ServiceAccount $user -n $namespace
+    if kubectl get quota  arena-quota-$user -n $namespace &> /dev/null;then
+        kubectl delete quota  arena-quota-$user -n $namespace
     fi  
 }
 
@@ -180,21 +180,21 @@ function get_cluster_url() {
     if [[ $CLUSTER_URL != "" ]];then
         return 
     fi
-    export CLUSTER_URL=$( arena-kubectl config view -o jsonpath='{.clusters[0].cluster.server}')
+    export CLUSTER_URL=$( kubectl config view -o jsonpath='{.clusters[0].cluster.server}')
     if [[ $CLUSTER_URL != "" ]];then
         return 
     fi
     logger warning "failed to get cluster url from the admin kubeconfig file"
-    export CLUSTER_URL=$(arena-kubectl get endpoints | grep -E '\<kubernetes\>' | awk '{print $2}')
+    export CLUSTER_URL=$(kubectl get endpoints | grep -E '\<kubernetes\>' | awk '{print $2}')
 }
 
 function generate_kubeconfig() {
     user=$USER_NAME
     namespace=$USER_NAMESPACE
-    SA_SECRET=$( arena-kubectl get sa -n $namespace $user -o jsonpath='{.secrets[0].name}' )
-    BEARER_TOKEN=$( arena-kubectl get secrets -n $namespace $SA_SECRET -o jsonpath='{.data.token}' | base64 --decode)
-    arena-kubectl get secrets -n $namespace $SA_SECRET -o jsonpath='{.data.ca\.crt}' | base64 --decode > $TEMPDIR/ca.crt
-    arena-kubectl config \
+    SA_SECRET=$( kubectl get sa -n $namespace $user -o jsonpath='{.secrets[0].name}' )
+    BEARER_TOKEN=$( kubectl get secrets -n $namespace $SA_SECRET -o jsonpath='{.data.token}' | base64 --decode)
+    kubectl get secrets -n $namespace $SA_SECRET -o jsonpath='{.data.ca\.crt}' | base64 --decode > $TEMPDIR/ca.crt
+    kubectl config \
     --kubeconfig=$OUTPUT \
     set-cluster \
     $CLUSTER_URL \
@@ -202,18 +202,18 @@ function generate_kubeconfig() {
     --certificate-authority=$TEMPDIR/ca.crt \
     --embed-certs=true
 
-    arena-kubectl config  \
+    kubectl config  \
     --kubeconfig=$OUTPUT \
     set-credentials $user --token=$BEARER_TOKEN
 
-    arena-kubectl config \
+    kubectl config \
     --kubeconfig=$OUTPUT \
     set-context $USER_NAME \
     --namespace="$USER_NAMESPACE" \
     --cluster=$CLUSTER_URL \
     --user=$user
 
-    arena-kubectl config \
+    kubectl config \
     --kubeconfig=$OUTPUT \
     use-context $USER_NAME
     

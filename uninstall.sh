@@ -51,12 +51,12 @@ function run() {
 
 function delete() {
 	set +e 
-	if arena-helm list -n $ARENA_NAMESPACE | grep arena-artifacts &> /dev/null;then
-		arena-helm delete arena-artifacts -n $ARENA_NAMESPACE
+	if helm list -n $ARENA_NAMESPACE | grep arena-artifacts &> /dev/null;then
+		helm delete arena-artifacts -n $ARENA_NAMESPACE
 	fi
-	arena-helm template arena-artifacts -n $ARENA_NAMESPACE $ARTIFACTS_DIR > /tmp/arena-artifacts.yaml
-	arena-kubectl delete -f /tmp/arena-artifacts.yaml
-	arena-kubectl delete ns $ARENA_NAMESPACE
+	helm template arena-artifacts -n $ARENA_NAMESPACE $ARTIFACTS_DIR > /tmp/arena-artifacts.yaml
+	kubectl delete -f /tmp/arena-artifacts.yaml
+	kubectl delete ns $ARENA_NAMESPACE
 	set -e  
 }
 
@@ -71,7 +71,7 @@ function delete_crds() {
         if [ -d $path ];then
             delete_crds $path
         else
-			arena-kubectl delete -f $path || true 
+			kubectl delete -f $path || true 
         fi
     done
 }
